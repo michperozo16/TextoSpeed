@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Escribe y Habla</string>
+
+    <string name="tts_no_active">No disponible :(</string>
+    <string name="hint_message">escribe algo</string>
+    <string name="button_play">Play</string>
+    <string name="text_status_init">Hola Kodlin!</string>
+</resources>
