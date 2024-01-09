@@ -31,6 +31,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        Log.d("MainActivity", "onCreate")
+
 
         inicializarTextToSpeech()
         configurarBotonClic()
@@ -42,21 +44,43 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         supportActionBar?.title = "Escribe y Habla"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        scrollView = findViewById(R.id.scrollView)
+       // scrollView = findViewById(R.id.scrollView)
         etMessage = findViewById(R.id.etMessage)
     }
 
     private fun inicializarTextToSpeech() {
-        tts = TextToSpeech(this, this)
-        tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) {}
-
-            override fun onDone(utteranceId: String?) {
-                avanzarParte()
+        try {
+            tts = TextToSpeech(this) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    val locale = Locale.getDefault()
+                    if (tts?.isLanguageAvailable(locale) == TextToSpeech.LANG_AVAILABLE) {
+                        tts?.language = locale
+                        tts?.setSpeechRate(1.5f)
+                    } else {
+                        Log.e("MainActivity", "Idioma no soportado: ${locale.language}")
+                    }
+                } else {
+                    Log.e("MainActivity", "Error en la inicialización de TextToSpeech")
+                }
             }
 
-            override fun onError(utteranceId: String?) {}
-        })
+            tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {}
+
+                override fun onDone(utteranceId: String?) {
+                    runOnUiThread {
+                        when (posicionActual) {
+                            partesTexto.size - 1 -> detenerHabla()
+                            else -> avanzarParte()
+                        }
+                    }
+                }
+
+                override fun onError(utteranceId: String?) {}
+            })
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error en inicializarTextToSpeech: ${e.message}")
+        }
     }
 
     private fun configurarBotonClic() {
@@ -88,13 +112,17 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun hablar() {
-        val mensaje: String = etMessage.text.toString()
-        if (mensaje.isNotEmpty()) {
-            partirTexto(mensaje)
-            reproducirPartes()
-            isSpeaking = true
-        } else {
-            tts?.speak("Introduce un texto por favor", TextToSpeech.QUEUE_FLUSH, null, "")
+        try {
+            val mensaje: String = etMessage.text.toString()
+            if (mensaje.isNotEmpty()) {
+                partirTexto(mensaje)
+                reproducirPartes()
+                isSpeaking = true
+            } else {
+                tts?.speak("Introduce un texto por favor", TextToSpeech.QUEUE_FLUSH, null, "")
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error en hablar: ${e.message}")
         }
     }
 
@@ -102,7 +130,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         partesTexto.clear()
 
         val palabras = mensaje.split("\\s+".toRegex())
-        val palabrasPorParte = 20
+        val palabrasPorParte = 30
 
         for (i in 0 until palabras.size step palabrasPorParte) {
             val inicio = i
@@ -113,103 +141,151 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun reproducirPartes() {
-        posicionActual = 0
-        resaltarParteActual()
+        try {
+            posicionActual = 0
+            resaltarParteActual()
 
-        val params = HashMap<String, String>()
-        params[TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID] = "parte"
-        tts?.speak(partesTexto[0], TextToSpeech.QUEUE_FLUSH, params)
+            val params = Bundle()
+            params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "parte")
+            tts?.speak(partesTexto[0], TextToSpeech.QUEUE_FLUSH, params, "parte")
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error en reproducirPartes: ${e.message}")
+
+        }
     }
 
     private fun avanzarParte() {
-        posicionActual++
-        if (posicionActual < partesTexto.size) {
-            resaltarParteActual()
+        try {
+            posicionActual++
+            if (posicionActual < partesTexto.size) {
+                resaltarParteActual()
 
-            val params = HashMap<String, String>()
-            params[TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID] = "parte"
-            if (posicionActual == 1) {
-                tts?.speak(partesTexto[posicionActual], TextToSpeech.QUEUE_FLUSH, params)
+                val params = Bundle()
+                params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "parte")
+
+                if (posicionActual == 1) {
+                    tts?.speak(partesTexto[posicionActual], TextToSpeech.QUEUE_FLUSH, params, "parte")
+                } else {
+                    tts?.speak(partesTexto[posicionActual], TextToSpeech.QUEUE_ADD, params, "parte")
+                }
             } else {
-                tts?.speak(partesTexto[posicionActual], TextToSpeech.QUEUE_ADD, params)
+                detenerHabla()
             }
-        } else {
-            detenerHabla()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error en avanzarParte: ${e.message}")
         }
     }
 
     private fun detenerHabla() {
-        tts?.stop()
-        isSpeaking = false
-        partesTexto.clear()
-        posicionActual = 0
+        try {
+            tts?.stop()
+            isSpeaking = false
+            partesTexto.clear()
+            posicionActual = 0
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error en detenerHabla: ${e.message}")
+        }
     }
 
     private fun resaltarParteActual() {
-        val textoCompleto = partesTexto.joinToString(" ")
-        val posicion = textoCompleto.indexOf(partesTexto[posicionActual])
+        try {
+            val textoCompleto = partesTexto.joinToString(" ")
+            val posicion = textoCompleto.indexOf(partesTexto[posicionActual])
 
-        if (posicion >= 0) {
-            val resaltado = SpannableString(textoCompleto)
-            resaltado.setSpan(
-                BackgroundColorSpan(ContextCompat.getColor(this, android.R.color.darker_gray)),
-                posicion,
-                posicion + partesTexto[posicionActual].length,
-                0
-            )
-            etMessage.setText(resaltado, TextView.BufferType.SPANNABLE)
+            if (posicion >= 0) {
+                val resaltado = SpannableString(textoCompleto)
+                resaltado.setSpan(
+                    BackgroundColorSpan(ContextCompat.getColor(this, android.R.color.darker_gray)),
+                    posicion,
+                    posicion + partesTexto[posicionActual].length,
+                    0
+                )
+                etMessage.setText(resaltado, TextView.BufferType.SPANNABLE)
 
-            // Scroll hacia la parte actual
-            scrollView.post {
-                val offset = etMessage.bottom - (scrollView.height / 2)
-                scrollView.smoothScrollTo(0, offset)
-                etMessage.requestFocus() // Mantener el foco en el EditText
+                // Scroll hacia la parte actual
+                scrollView.post {
+                    val offset = etMessage.bottom - (scrollView.height / 2)
+                    scrollView.smoothScrollTo(0, offset)
+                    etMessage.requestFocus() // Mantener el foco en el EditText
+                }
             }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error en resaltarParteActual: ${e.message}")
         }
     }
 
     private fun establecerVelocidadHabla(velocidad: Float) {
-        tts?.setSpeechRate(velocidad)
+        try {
+            tts?.setSpeechRate(velocidad)
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error en establecerVelocidadHabla: ${e.message}")
+        }
     }
 
     override fun onInit(status: Int) {
-        if (status == TextToSpeech.SUCCESS) {
-            establecerIdiomaTts(Locale("es"))
-        } else {
-            manejarFalloInicializacionTts()
+        try {
+            if (status == TextToSpeech.SUCCESS) {
+                establecerIdiomaTts(Locale("es"))
+            } else {
+                manejarFalloInicializacionTts()
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error en onInit: ${e.message}")
         }
     }
 
     private fun establecerIdiomaTts(locale: Locale) {
-        tts?.language = locale
+        try {
+            tts?.language = locale
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error en establecerIdiomaTts: ${e.message}")
+        }
     }
 
     private fun manejarFalloInicializacionTts() {
-        findViewById<Button>(R.id.btnPlay).isEnabled = false
-    }
-
-    override fun onDestroy() {
-        Log.d("MainActivity", "onDestroy")
-        if (!isFinishing) {
-            tts?.stop()
-            tts?.shutdown()
+        try {
+            findViewById<Button>(R.id.btnPlay).isEnabled = false
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error en manejarFalloInicializacionTts: ${e.message}")
         }
-        super.onDestroy()
     }
 
     override fun onPause() {
-        Log.d("MainActivity", "onPause")
-        super.onPause()
+        try {
+            Log.d("MainActivity", "onPause")
+            super.onPause()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error en onPause: ${e.message}")
+        }
     }
 
     override fun onStop() {
-        Log.d("MainActivity", "onStop")
-        super.onStop()
+        try {
+            Log.d("MainActivity", "onStop")
+            super.onStop()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error en onStop: ${e.message}")
+        }
     }
 
     override fun onResume() {
-        Log.d("MainActivity", "onResume")
-        super.onResume()
-
+        try {
+            Log.d("MainActivity", "onResume")
+            super.onResume()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error en onResume: ${e.message}")
+        }
+    }
+    override fun onDestroy() {
+        try {
+            Log.d("MainActivity", "onDestroy")
+            if (!isFinishing) {
+                tts?.stop()
+                tts?.shutdown()
+            }
+            super.onDestroy()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error en onDestroy: ${e.message}")
+        }
     }
 }

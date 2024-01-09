@@ -1,45 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
+<RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/scrollView"
+    android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:label="@string/app_name"
-    android:windowSoftInputMode="adjustResize"
     android:fitsSystemWindows="true">
 
-    <LinearLayout
+    <ScrollView
+        android:id="@+id/scrollView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:layout_above="@+id/bottomContainer">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingLeft="16dp"
+            android:paddingTop="16dp"
+            android:paddingRight="16dp"
+            android:paddingBottom="16dp">
+
+            <EditText
+                android:id="@+id/etMessage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="@font/varsity_regular"
+                android:gravity="center"
+                android:hint="@string/hint_message"
+                android:importantForAutofill="no"
+                android:inputType="textMultiLine"
+                android:maxLength="6000" />
+
+            <SeekBar
+                android:id="@+id/seekBarSpeed"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <RelativeLayout
+        android:id="@+id/bottomContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingLeft="16dp"
-        android:paddingTop="16dp"
-        android:paddingRight="16dp"
-        android:paddingBottom="16dp">
-
-        <EditText
-            android:id="@+id/etMessage"
-            android:layout_width="match_parent"
-            android:layout_height="600dp"
-            android:layout_marginBottom="16sp"
-            android:fontFamily="@font/varsity_regular"
-            android:gravity="center"
-            android:hint="@string/hint_message"
-            android:importantForAutofill="no"
-            android:inputType="textMultiLine" />
+        android:layout_alignParentBottom="true">
 
         <Button
             android:id="@+id/btnPlay"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16sp"
             android:text="@string/button_play" />
-
-        <SeekBar
-            android:id="@+id/seekBarSpeed"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16sp" />
-
-    </LinearLayout>
-</ScrollView>
+    </RelativeLayout>
+</RelativeLayout>
